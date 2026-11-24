@@ -1,0 +1,1235 @@
+{
+  "info": {
+    "name": "SIMRS Rawat Jalan",
+    "description": "Koleksi endpoint demo untuk environment dev/demo (menulis data uji). Jalankan 01-22 berurutan lewat Collection Runner: token, NIK, tanggal, nominal, dan kunci idempotensi diisi otomatis. 04b/13b membuktikan idempotensi, 13c membuktikan kembalian saat bayar lebih, 11b memeriksa hasil lab di riwayat kunjungan, 19-22 menguji layanan Node.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8086/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "patientId",
+      "value": ""
+    },
+    {
+      "key": "registrationId",
+      "value": ""
+    },
+    {
+      "key": "examId",
+      "value": ""
+    },
+    {
+      "key": "prescriptionId",
+      "value": ""
+    },
+    {
+      "key": "labRequestId",
+      "value": ""
+    },
+    {
+      "key": "invoiceId",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": "1"
+    },
+    {
+      "key": "fcmToken",
+      "value": "",
+      "description": "Token FCM dari browser, atau dummy minimal 100 karakter untuk uji backend."
+    },
+    {
+      "key": "nik",
+      "value": "",
+      "description": "NIK 16 digit acak, dibuat ulang oleh pre-request 03."
+    },
+    {
+      "key": "today",
+      "value": "",
+      "description": "Tanggal hari ini (YYYY-MM-DD), diisi oleh pre-request 04."
+    },
+    {
+      "key": "regKey",
+      "value": "",
+      "description": "Kunci idempotensi registrasi, dipakai 04 dan 04b."
+    },
+    {
+      "key": "payKey",
+      "value": "",
+      "description": "Kunci idempotensi pembayaran, dipakai 13 dan 13b."
+    },
+    {
+      "key": "amount",
+      "value": "",
+      "description": "Total invoice asli, diisi oleh test script 12."
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "description": "ID pembayaran pertama, dipakai 13b."
+    },
+    {
+      "key": "partialAmount",
+      "value": "",
+      "description": "Pembayaran pertama: total dikurangi 15000, diisi test script 12."
+    },
+    {
+      "key": "remainingBefore",
+      "value": "",
+      "description": "Sisa setelah pembayaran pertama, diisi test script 13."
+    },
+    {
+      "key": "overpayAmount",
+      "value": "",
+      "description": "Sisa + 15000, dipakai 13c untuk menghasilkan kembalian 15000."
+    },
+    {
+      "key": "payKeyOverpay",
+      "value": "",
+      "description": "Kunci idempotensi pembayaran lebih, dipakai 13c."
+    },
+    {
+      "key": "nodeUrl",
+      "value": "http://127.0.0.1:3010",
+      "description": "Base URL layanan Node/Express."
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"admin\",\"password\":\"Admin123!\",\"fcm_token\":\"{{fcmToken}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "['token','patientId','registrationId','examId','prescriptionId','labRequestId','invoiceId','regKey','payKey','payKeyOverpay','amount','partialAmount','remainingBefore','overpayAmount','paymentId'].forEach(function (key) { pm.collectionVariables.set(key, ''); });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login sukses', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json().data;",
+              "pm.collectionVariables.set('token', data.token);",
+              "pm.collectionVariables.set('userId', data.user.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Me",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 Buat pasien",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Pasien Postman {{nik}}\",\"nik\":\"{{nik}}\",\"gender\":\"P\",\"birth_date\":\"1990-01-01\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/patients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "patients"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var stamp = Date.now().toString();",
+              "var suffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');",
+              "pm.collectionVariables.set('nik', (stamp + suffix).slice(-16));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('pasien dibuat', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('patientId', pm.response.json().data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Buat registrasi",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"patient_id\":{{patientId}},\"polyclinic_id\":1,\"doctor_id\":1,\"registration_date\":\"{{today}}\",\"idempotency_key\":\"{{regKey}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/registrations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "registrations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10));",
+              "if (!pm.collectionVariables.get('regKey')) pm.collectionVariables.set('regKey', pm.variables.replaceIn('{{$guid}}'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('registrasi dibuat', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('registrationId', pm.response.json().data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04b Registrasi ulang (idempoten)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"patient_id\":{{patientId}},\"polyclinic_id\":1,\"doctor_id\":1,\"registration_date\":\"{{today}}\",\"idempotency_key\":\"{{regKey}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/registrations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "registrations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('idempotensi registrasi', function () {",
+              "  var data = pm.response.json().data;",
+              "  pm.expect(data.replayed).to.eql(true);",
+              "  pm.expect(data.id).to.eql(Number(pm.collectionVariables.get('registrationId')));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Status waiting",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\":\"waiting\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/registrations/{{registrationId}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "registrations",
+            "{{registrationId}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 Buat pemeriksaan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registration_id\":{{registrationId}},\"subjective\":\"Demam\",\"objective\":\"Baik\",\"assessment\":\"J00\",\"plan\":\"Istirahat\",\"vital_signs\":{\"temperature\":\"38\"},\"diagnoses\":[{\"diagnosis_id\":1,\"is_primary\":true}]}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/examinations",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "examinations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('examId', pm.response.json().data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Tambah tindakan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"medical_action_id\":1,\"quantity\":1}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/registrations/{{registrationId}}/actions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "registrations",
+            "{{registrationId}}",
+            "actions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 Buat resep",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registration_id\":{{registrationId}},\"examination_id\":{{examId}},\"items\":[{\"drug_id\":1,\"dose\":\"1 tablet\",\"frequency\":\"3x hari\",\"quantity\":3}]}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/prescriptions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prescriptions"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('prescriptionId', pm.response.json().data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Serahkan obat",
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/prescriptions/{{prescriptionId}}/dispense",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "prescriptions",
+            "{{prescriptionId}}",
+            "dispense"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 Buat lab request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registration_id\":{{registrationId}},\"examination_id\":{{examId}},\"lab_test_id\":1}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/lab/requests",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "lab",
+            "requests"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('labRequestId', pm.response.json().data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Input hasil lab",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"result\":\"Hb 13 g/dL\",\"reference_range\":\"12-16\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/lab/requests/{{labRequestId}}/result",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "lab",
+            "requests",
+            "{{labRequestId}}",
+            "result"
+          ]
+        }
+      }
+    },
+    {
+      "name": "11b Cek hasil lab di riwayat kunjungan",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/examinations/{{examId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "examinations",
+            "{{examId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('hasil lab terbaca di detail pemeriksaan', function () {",
+              "  var labs = pm.response.json().data.lab_requests || [];",
+              "  pm.expect(labs.length).to.be.above(0);",
+              "  pm.expect(labs[0].result).to.eql('Hb 13 g/dL');",
+              "  pm.expect(labs[0].reference_range).to.eql('12-16');",
+              "  pm.expect(labs[0].result_by).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Buka tagihan",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registration_id\":{{registrationId}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/invoices",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "invoices"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('invoice dibuat', function () { pm.response.to.have.status(200); });",
+              "var invoice = pm.response.json().data.invoice;",
+              "pm.collectionVariables.set('invoiceId', invoice.id);",
+              "pm.collectionVariables.set('amount', invoice.total);",
+              "var total = Number(invoice.total);",
+              "pm.collectionVariables.set('partialAmount', Math.max(0.01, Math.round((total - 15000) * 100) / 100));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Bayar",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\":{{partialAmount}},\"method\":\"cash\",\"idempotency_key\":\"{{payKey}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/invoices/{{invoiceId}}/pay",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "invoices",
+            "{{invoiceId}}",
+            "pay"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('payKey')) pm.collectionVariables.set('payKey', pm.variables.replaceIn('{{$guid}}'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('pembayaran sukses', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json().data;",
+              "pm.collectionVariables.set('paymentId', data.payment.id);",
+              "var remaining = Math.round((Number(data.invoice.total) - Number(data.invoice.paid_amount)) * 100) / 100;",
+              "pm.collectionVariables.set('remainingBefore', remaining);",
+              "pm.collectionVariables.set('overpayAmount', Math.round((remaining + 15000) * 100) / 100);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13b Bayar ulang (idempoten)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\":{{partialAmount}},\"method\":\"cash\",\"idempotency_key\":\"{{payKey}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/invoices/{{invoiceId}}/pay",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "invoices",
+            "{{invoiceId}}",
+            "pay"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('idempotensi pembayaran', function () {",
+              "  var data = pm.response.json().data;",
+              "  pm.expect(data.replayed).to.eql(true);",
+              "  pm.expect(data.payment.id).to.eql(Number(pm.collectionVariables.get('paymentId')));",
+              "  pm.expect(Number(data.payment.amount)).to.eql(Number(pm.collectionVariables.get('partialAmount')));",
+              "  pm.expect(Number(data.payment.change_amount)).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13c Bayar lebih dari sisa (kembalian)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"amount\":{{overpayAmount}},\"method\":\"cash\",\"idempotency_key\":\"{{payKeyOverpay}}\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/invoices/{{invoiceId}}/pay",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "invoices",
+            "{{invoiceId}}",
+            "pay"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('payKeyOverpay')) pm.collectionVariables.set('payKeyOverpay', pm.variables.replaceIn('{{$guid}}'));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('pembayaran lebih sukses', function () { pm.response.to.have.status(200); });",
+              "var data = pm.response.json().data;",
+              "pm.test('kembalian 15000', function () { pm.expect(Number(data.payment.change_amount)).to.eql(15000); });",
+              "pm.test('nominal dipakai sesuai sisa', function () { pm.expect(Number(data.payment.amount)).to.eql(Number(pm.collectionVariables.get('remainingBefore'))); });",
+              "pm.test('invoice lunas tanpa kelebihan paid_amount', function () {",
+              "  pm.expect(data.invoice.status).to.eql('paid');",
+              "  pm.expect(Number(data.invoice.paid_amount)).to.eql(Number(data.invoice.total));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Dashboard",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/reports/dashboard",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "dashboard"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 Finalisasi pemeriksaan",
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/examinations/{{examId}}/finalize",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "examinations",
+            "{{examId}}",
+            "finalize"
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 Notifikasi - Daftar token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"token\":\"{{fcmToken}}\",\"platform\":\"web\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notifications/token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "notifications",
+            "token"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('fcmToken')) {",
+              "  var token = '';",
+              "  while (token.length < 120) token += pm.variables.replaceIn('{{$guid}}').replace(/-/g, '');",
+              "  pm.collectionVariables.set('fcmToken', token.slice(0, 120));",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('token notifikasi tersimpan', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Notifikasi - Kirim tes",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/notifications/test",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "notifications",
+            "test"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 Users - Reset token notifikasi",
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/users/{{userId}}/reset-notification-token",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "{{userId}}",
+            "reset-notification-token"
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 Node - Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{nodeUrl}}/health",
+          "host": [
+            "{{nodeUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Node sehat', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 Node - Dashboard summary",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{nodeUrl}}/api/v1/dashboard/summary?from={{today}}&to={{today}}",
+          "host": [
+            "{{nodeUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "dashboard",
+            "summary"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "{{today}}"
+            },
+            {
+              "key": "to",
+              "value": "{{today}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('today')) pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('dashboard via Node', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 Node - Daftar lab request",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{nodeUrl}}/api/v1/lab/requests?status=completed",
+          "host": [
+            "{{nodeUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lab",
+            "requests"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "completed"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('lab request via Node', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 Node - Input hasil lab",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"lab_request_id\":{{labRequestId}},\"result\":\"Hb 13 g/dL\",\"reference_range\":\"12-16\",\"created_by\":{{userId}}}"
+        },
+        "url": {
+          "raw": "{{nodeUrl}}/api/v1/lab/results",
+          "host": [
+            "{{nodeUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "lab",
+            "results"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('hasil lab via Node tersimpan', function () {",
+              "  pm.expect(pm.response.code).to.be.within(200, 299);",
+              "  pm.expect(pm.response.json().success).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

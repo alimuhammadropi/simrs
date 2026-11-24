@@ -1,0 +1,35 @@
+# Environment / secrets (template .env.example tetap ter-commit)
+.env
+.env.*
+!.env.example
+
+# Backend: dependency & runtime yang dihasilkan saat install/jalan
+/backend/vendor/
+/backend/runtime/
+/backend/web/assets/
+/backend/web/uploads/
+/docs/JAWABAN-REAL-CASE-TEST.md
+/docs/JAWABAN-REAL-CASE-TEST.docx
+
+# Firebase service account / kredensial privat (jangan pernah di-commit)
+/backend/runtime/firebase-service-account.json
+**/firebase-service-account*.json
+**/*firebase-adminsdk*.json
+
+# Frontend & services: dependency / build output
+node_modules/
+/frontend/dist/
+
+# Log
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor & OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+.user.ini
