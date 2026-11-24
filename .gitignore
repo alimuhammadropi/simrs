@@ -10,6 +10,7 @@
 /backend/web/uploads/
 /docs/JAWABAN-REAL-CASE-TEST.md
 /docs/JAWABAN-REAL-CASE-TEST.docx
+/REAL CASE TEST*.pdf
 
 # Firebase service account / kredensial privat (jangan pernah di-commit)
 /backend/runtime/firebase-service-account.json
